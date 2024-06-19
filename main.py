@@ -3,10 +3,9 @@ from fastapi import FastAPI, Query
 import csv
 import json
 from langchain_community.document_loaders import CSVLoader
-from langchain_community.document_transformers import LongContextReorder
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
-from langchain_community.vectorstores import Chroma
+from langchain_chroma import Chroma
 from langchain_community.retrievers import BM25Retriever
 from langchain.retrievers import EnsembleRetriever
 from langchain_core.output_parsers import StrOutputParser
@@ -67,10 +66,15 @@ def fetch_row_with_headers(file_path, row_number):
 def process_documents_to_json(relevant_docs):
     """Process documents and convert them to JSON format."""
     all_data = []
+    processed_ids = set()
     for doc in relevant_docs:
-        row_data = fetch_row_with_headers(doc.metadata['source'], doc.metadata['row'])
-        if row_data:
-            all_data.append(row_data)
+        row_id = doc.metadata['row']  # Assumes 'row' is a unique identifier
+        if row_id not in processed_ids:  # Check if the row has been processed
+            processed_ids.add(row_id)  # Mark this ID as processed
+            row_data = fetch_row_with_headers(doc.metadata['source'], int(row_id))
+            if row_data:
+                all_data.append(row_data)
+                
     return json.dumps(all_data, ensure_ascii=False, indent=4)
 
 @app.get("/")
@@ -134,5 +138,5 @@ Question: 我想找可以做{keyword}的研究人員
     return {"error": "Keyword is required for analysis."}
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000, debug=True)
+    uvicorn.run(app, host="192.168.100.10", port=8000,)
  
